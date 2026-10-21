@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+<defs>
+  <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0D9488"/><stop offset="1" stop-color="#2DD4BF"/>
+  </linearGradient>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F7F4"/>
+  </linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f766e" flood-opacity="0.12"/>
+  </filter>
+</defs>
+<rect width="390" height="844" fill="url(#bg)"/><path d="M0 684 Q 97 644 195 684 T 390 684 V844 H0 Z" fill="#2DD4BF" opacity="0.15"/><path d="M0 734 Q 97 694 195 734 T 390 734 V844 H0 Z" fill="#0D9488" opacity="0.18"/><text x="30" y="30" font-family="Segoe UI" font-size="14" font-weight="600" fill="#1E293B">9:41</text>
+<g transform="translate(330,18)" fill="#1E293B">
+  <rect x="0" y="6" width="3" height="6" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/>
+  <rect x="20" y="4" width="16" height="8" rx="2" fill="none" stroke="#1E293B"/><rect x="22" y="6" width="10" height="4" rx="1"/>
+</g><rect x="155" y="110" width="80" height="80" rx="24.0" fill="url(#teal)"/><g transform="translate(195,150) scale(1.6666666666666667)" fill="#FFFFFF"><circle cx="0" cy="-5" r="5"/><path d="M-8 11 C-8 4 8 4 8 11 L8 12 L-8 12 Z"/><rect x="-2" y="3" width="4" height="8" fill="#0D9488"/><rect x="-4" y="5" width="8" height="4" fill="#0D9488"/></g><text x="195" y="230" font-family="Segoe UI" font-size="24" font-weight="700" fill="#1E293B" text-anchor="middle">Doctor Login</text><text x="195" y="256" font-family="Segoe UI" font-size="13" font-weight="400" fill="#64748B" text-anchor="middle">Sign in to manage patients</text><rect x="24" y="290" width="342" height="290" rx="24" fill="#FFFFFF" filter="url(#shadow)"/><rect x="44" y="320" width="302" height="52" rx="14" fill="#F1F5F9"/><text x="62" y="353" font-family="Segoe UI" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">User ID</text><rect x="44" y="388" width="302" height="52" rx="14" fill="#F1F5F9"/><text x="62" y="421" font-family="Segoe UI" font-size="13" font-weight="400" fill="#64748B" text-anchor="start">Password</text><rect x="44" y="460" width="302" height="52" rx="26" fill="url(#teal)"/><text x="195.0" y="493" font-family="Segoe UI" font-size="15" font-weight="600" fill="#FFFFFF" text-anchor="middle">LOGIN</text><text x="195" y="545" font-family="Segoe UI" font-size="13" font-weight="600" fill="#0D9488" text-anchor="middle">Forgot Password?</text>
+</svg>

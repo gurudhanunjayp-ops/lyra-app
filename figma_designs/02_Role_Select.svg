@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+<defs>
+  <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0D9488"/><stop offset="1" stop-color="#2DD4BF"/>
+  </linearGradient>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E9F7F4"/>
+  </linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#0f766e" flood-opacity="0.12"/>
+  </filter>
+</defs>
+<rect width="390" height="844" fill="url(#bg)"/><path transform="translate(330,110) scale(1.0)" opacity="0.1" fill="#0D9488" d="M0 10 C0 0 -20 0 -20 12 C-20 24 0 34 0 40 C0 34 20 24 20 12 C20 0 0 0 0 10 Z"/><path transform="translate(50,680) scale(0.8)" opacity="0.08" fill="#0D9488" d="M0 10 C0 0 -20 0 -20 12 C-20 24 0 34 0 40 C0 34 20 24 20 12 C20 0 0 0 0 10 Z"/><text x="30" y="30" font-family="Segoe UI" font-size="14" font-weight="600" fill="#1E293B">9:41</text>
+<g transform="translate(330,18)" fill="#1E293B">
+  <rect x="0" y="6" width="3" height="6" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/>
+  <rect x="20" y="4" width="16" height="8" rx="2" fill="none" stroke="#1E293B"/><rect x="22" y="6" width="10" height="4" rx="1"/>
+</g><rect x="24" y="60" width="342" height="130" rx="24" fill="url(#teal)" filter="url(#shadow)"/><text x="48" y="118" font-family="Segoe UI" font-size="22" font-weight="700" fill="#FFFFFF" text-anchor="start">Welcome to Lyra</text><text x="48" y="144" font-family="Segoe UI" font-size="13" font-weight="400" fill="#D6F5F0" text-anchor="start">We help you to be complete</text><rect x="24" y="230" width="342" height="105" rx="20" fill="#FFFFFF" filter="url(#shadow)"/><rect x="44" y="256" width="52" height="52" rx="15.6" fill="url(#teal)"/><g transform="translate(70,282) scale(1.0833333333333333)" fill="#FFFFFF"><circle cx="0" cy="-5" r="5"/><path d="M-8 11 C-8 4 8 4 8 11 L8 12 L-8 12 Z"/><rect x="-2" y="3" width="4" height="8" fill="#0D9488"/><rect x="-4" y="5" width="8" height="4" fill="#0D9488"/></g><text x="112" y="277" font-family="Segoe UI" font-size="17" font-weight="600" fill="#1E293B" text-anchor="start">Doctor</text><text x="112" y="300" font-family="Segoe UI" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">Sign in to continue</text><rect x="316" y="266" width="34" height="34" rx="17" fill="url(#teal)"/><g transform="translate(333,283)" stroke="#FFFFFF" stroke-width="3" fill="none"><path d="M-5 -8 L5 0 L-5 8"/></g><rect x="24" y="360" width="342" height="105" rx="20" fill="#FFFFFF" filter="url(#shadow)"/><rect x="44" y="386" width="52" height="52" rx="15.6" fill="url(#teal)"/><g transform="translate(70,412) scale(1.0833333333333333)" fill="#FFFFFF"><circle cx="0" cy="-5" r="5"/><path d="M-8 11 C-8 4 8 4 8 11 L8 12 L-8 12 Z"/></g><text x="112" y="407" font-family="Segoe UI" font-size="17" font-weight="600" fill="#1E293B" text-anchor="start">Patient</text><text x="112" y="430" font-family="Segoe UI" font-size="12" font-weight="400" fill="#64748B" text-anchor="start">View your care</text><rect x="316" y="396" width="34" height="34" rx="17" fill="url(#teal)"/><g transform="translate(333,413)" stroke="#FFFFFF" stroke-width="3" fill="none"><path d="M-5 -8 L5 0 L-5 8"/></g><text x="195" y="560" font-family="Segoe UI" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">Select your role to continue</text>
+</svg>

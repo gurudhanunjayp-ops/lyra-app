@@ -1,0 +1,9 @@
+{
+  "id": "1692451372346952606",
+  "name": "Lyra Screen Builder",
+  "id": "lyra-screen-builder",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page"
+}
