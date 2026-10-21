@@ -27,6 +27,7 @@ String addreports ="http://"+ip+"/Infertilityapp/addreports.php";
 String graph = "http://"+ip+"/Infertilityapp/graph.php";
 String viewstatus = "http://"+ip+"/Infertilityapp/viewreports.php";
 String viewadvice = "http://"+ip+"/Infertilityapp/viewadvices.php";
+String addadvice = "http://"+ip+"/Infertilityapp/addadvices.php";
 String fetchdate = "http://"+ip+"/Infertilityapp/fetchdate.php";
 String uploadimg = "http://"+ip+"/Infertilityapp/uploadimg.php";
 String savedate = "http://"+ip+"/Infertilityapp/save_date.php";

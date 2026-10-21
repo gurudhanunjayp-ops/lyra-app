@@ -26,7 +26,11 @@ class _ResultsPageState extends State<ResultsPage> {
     final response = await http.post(
       Uri.parse(fetchperioddate), // Replace with your actual URL
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({'userid': widget.userId}),
+      body: json.encode({
+        'userid': widget.userId,
+        'userId': widget.userId,
+        'Userid': widget.userId,
+      }),
     );
 
     if (response.statusCode == 200) {

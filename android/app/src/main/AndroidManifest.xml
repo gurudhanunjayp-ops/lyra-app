@@ -11,7 +11,8 @@
     </queries>
     <application
         android:label="Lyra"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name="com.simats.Lyra.MainActivity"
             android:exported="true"

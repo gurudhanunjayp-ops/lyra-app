@@ -31,17 +31,66 @@ class _PLoginPageState extends State<PLoginPage> {
   DateTime? _selectedDate;
   int _dayCount = 0;
   Timer? _timer;
+  late String _displayName;
 
   @override
   void initState() {
     super.initState();
+    _displayName = widget.name;
     _fetchSavedDate();
+    if (_displayName.isEmpty) {
+      _fetchPatientName();
+    }
+  }
+
+  Future<void> _fetchPatientName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedName = prefs.getString('name') ?? prefs.getString('userName');
+      if (cachedName != null && cachedName.isNotEmpty && mounted) {
+        setState(() {
+          _displayName = cachedName;
+        });
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse(viewpatient),
+        body: {'userId': widget.userId, 'userid': widget.userId},
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200 && mounted) {
+        final body = response.body;
+        final start = body.indexOf('{');
+        final end = body.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+          final data = jsonDecode(body.substring(start, end + 1));
+          var details = data['patientDetails'];
+          if (details is List && details.isNotEmpty) {
+            details = details.first;
+          }
+          if (details is Map && details['Name'] != null) {
+            final fetched = details['Name'].toString().trim();
+            if (fetched.isNotEmpty && mounted) {
+              setState(() {
+                _displayName = fetched;
+              });
+              await prefs.setString('name', fetched);
+            }
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchSavedDate() async {
     final url = fetchdate;
     final headers = {'Content-Type': 'application/json'};
-    final body = json.encode({'userId': widget.userId});
+    final body = json.encode({
+      'userId': widget.userId,
+      'userid': widget.userId,
+      'Userid': widget.userId,
+    });
 
     print('Request URL: $url'); // Debugging
     print('Request Headers: $headers'); // Debugging
@@ -102,8 +151,12 @@ class _PLoginPageState extends State<PLoginPage> {
     prefs.setString('selected_date', date.toIso8601String());
 
     final headers = {'Content-Type': 'application/json'};
-    final body = json.encode(
-        {'userId': widget.userId, 'selectedDate': date.toIso8601String()});
+    final body = json.encode({
+      'userId': widget.userId,
+      'userid': widget.userId,
+      'Userid': widget.userId,
+      'selectedDate': date.toIso8601String(),
+    });
 
     final response1 = await http.post(
       Uri.parse(savedate),
@@ -211,8 +264,8 @@ class _PLoginPageState extends State<PLoginPage> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
-                        widget.name.isNotEmpty
-                            ? widget.name
+                        _displayName.isNotEmpty
+                            ? _displayName
                             : 'Patient Menu',
                         style: const TextStyle(
                           color: Colors.white,
@@ -233,7 +286,7 @@ class _PLoginPageState extends State<PLoginPage> {
                     context,
                     MaterialPageRoute(
                         builder: (context) => PProfilePage(
-                            userId: widget.userId, name: widget.name)),
+                            userId: widget.userId, name: _displayName)),
                   );
                 },
               ),
@@ -416,7 +469,7 @@ class _PLoginPageState extends State<PLoginPage> {
                             MaterialPageRoute(
                                 builder: (context) => PReportsPage(
                                     userId: widget.userId,
-                                    name: widget.name)),
+                                    name: _displayName)),
                           );
                         },
                       ),
@@ -533,11 +586,9 @@ class _PLoginPageState extends State<PLoginPage> {
 
       if (streamedResponse.statusCode == 200) {
         // Show Snackbar on successful upload
-        Navigator.of(context).pop();
         _showSnackbar('Image uploaded successfully');
       } else {
         // Show Snackbar on failed upload
-        Navigator.of(context).pop();
         _showSnackbar('Image upload failed');
       }
     } catch (error) {

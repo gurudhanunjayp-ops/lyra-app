@@ -20,7 +20,7 @@ class _PMedicationPageState extends State<PMedicationPage> {
   Future<void> fetchMedicationDetails(String userId) async {
     final response = await http.post(
       Uri.parse(viewmed),
-      body: {'userid': userId},
+      body: {'userid': userId, 'userId': userId},
     );
 
     if (response.statusCode == 200) {

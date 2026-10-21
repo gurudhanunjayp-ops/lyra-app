@@ -3,11 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:infertilityapp/app_ui.dart';
+
 class PCyclePage extends StatefulWidget {
   final String userId;
   final String name;
 
-  PCyclePage({required this.userId, required this.name});
+  PCyclePage({super.key, required this.userId, required this.name});
 
   @override
   _PCyclePageState createState() => _PCyclePageState();
@@ -71,32 +73,25 @@ class _PCyclePageState extends State<PCyclePage> {
         if (response.statusCode == 200) {
           final responseData = jsonDecode(response.body);
           if (responseData['status'] == true) {
-            print('Date updated successfully.');
-            // Call dayDifference.php to update the 'days' column
             _updateDayDifference(dayDifference);
-          } else {
-            print('Failed to update date: ${responseData['message']}');
           }
-        } else {
-          print('Failed to update date: HTTP ${response.statusCode}');
         }
       } catch (error) {
-        print('Error updating date: $error');
+        // Handle network or other errors
       }
     } else {
       showDialog(
         context: context,
-        builder: (context) =>
-            AlertDialog(
-              title: Text("Error"),
-              content: Text("Please select a date."),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("OK"),
-                ),
-              ],
+        builder: (context) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Please select a date."),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("OK"),
             ),
+          ],
+        ),
       );
     }
   }
@@ -115,17 +110,12 @@ class _PCyclePageState extends State<PCyclePage> {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         if (responseData['status'] == true) {
-          print('Day difference updated successfully.');
           // Pass dayDifference back to previous page
-          Navigator.pop(context, dayDifference);
-        } else {
-          print('Failed to update day difference: ${responseData['message']}');
+          if (mounted) Navigator.pop(context, dayDifference);
         }
-      } else {
-        print('Failed to update day difference: HTTP ${response.statusCode}');
       }
     } catch (error) {
-      print('Error updating day difference: $error');
+      // Handle network or other errors
     }
   }
 
@@ -138,9 +128,7 @@ class _PCyclePageState extends State<PCyclePage> {
         _selectedDate!.day,
       );
 
-      int differenceInDays = now
-          .difference(selectedDay)
-          .inDays;
+      int differenceInDays = now.difference(selectedDay).inDays;
       differenceInDays += 1;
 
       setState(() {
@@ -149,208 +137,136 @@ class _PCyclePageState extends State<PCyclePage> {
     }
   }
 
-  String _numberSuffix(int number) {
-    if (number >= 11 && number <= 13) {
-      return 'th';
+  Future<void> _pickDate() async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null && pickedDate != _selectedDate) {
+      setState(() {
+        _selectedDate = pickedDate;
+      });
+      _calculateDayDifference();
     }
-    switch (number % 10) {
-      case 1:
-        return 'st';
-      case 2:
-        return 'nd';
-      case 3:
-        return 'rd';
-      default:
-        return 'th';
-    }
-  }
-
-  String _formatDayDifference(int dayDifference) {
-    return '$dayDifference${_numberSuffix(dayDifference)} day';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xff0d9488),
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  Icons.arrow_back_ios,
-                  size: 30,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            SizedBox(width: 20),
-            Text(
-              'Cycle Update',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return PageScaffold(
+      decor: BgDecor.dots,
+      title: 'Cycle Update',
       body: SingleChildScrollView(
-        child: SizedBox(
-          height: MediaQuery
-              .of(context)
-              .size
-              .height,
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/sqbackground.png'),
-                    fit: BoxFit.cover,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            const GradientIconBadge(
+              icon: Icons.event_repeat_rounded,
+              size: 84,
+              iconSize: 42,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Update the first day of your current cycle',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14.5, color: AppColors.muted),
+            ),
+            const SizedBox(height: 26),
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cycle start date',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: kToolbarHeight + 10,
-                left: 45,
-                right: 45,
-                child: Container(
-                  width: double.infinity,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 70),
-                      Container(
-                        height: 350,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(0.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              spreadRadius: 2,
-                              blurRadius: 8,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Cycle up to:',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                  ],
-                                ),
-                                SizedBox(height: 80),
-                                Container(
-                                  width: 350,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.pink[200],
-                                    borderRadius: BorderRadius.circular(0),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        spreadRadius: 1,
-                                        blurRadius: 2,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Expanded(
-                                        child: TextFormField(
-                                          readOnly: true,
-                                          controller: TextEditingController(
-                                            text: _selectedDate != null
-                                                ? DateFormat('dd/MM/yyyy')
-                                                .format(_selectedDate!)
-                                                : '',
-                                          ),
-                                          onTap: () async {
-                                            final DateTime? pickedDate = await showDatePicker(
-                                              context: context,
-                                              initialDate: DateTime.now(),
-                                              firstDate: DateTime(1900),
-                                              lastDate: DateTime(2100),
-                                            );
-                                            if (pickedDate != null &&
-                                                pickedDate != _selectedDate) {
-                                              setState(() {
-                                                _selectedDate = pickedDate;
-                                              });
-                                              _calculateDayDifference(); // Calculate day difference when date changes
-                                            }
-                                          },
-                                          decoration: InputDecoration(
-                                            enabledBorder: OutlineInputBorder(
-                                              borderSide: BorderSide(
-                                                  color: Colors.pink.shade200),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderSide: BorderSide(
-                                                  color: Colors.pink.shade200),
-                                            ),
-                                            contentPadding: EdgeInsets.all(8),
-                                            suffixIcon: Icon(
-                                                Icons.calendar_today),
-                                            hintText: 'Enter 1st day of your cycle',
-                                            hintStyle: TextStyle(fontSize: 12),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(height: 20),
-                                Center(
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        _updateCycleDate(_dayDifference),
-                                    child: Text('OK'),
-                                  ),
-                                ),
-                              ],
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _pickDate,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFC9E8E2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 20, color: AppColors.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _selectedDate != null
+                                  ? DateFormat('dd MMM yyyy')
+                                      .format(_selectedDate!)
+                                  : 'Select first day of your cycle',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: _selectedDate != null
+                                    ? AppColors.ink
+                                    : AppColors.muted,
+                                fontWeight: _selectedDate != null
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
                             ),
                           ),
-                        ),
+                          const Icon(Icons.expand_more_rounded,
+                              color: AppColors.muted),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  if (_selectedDate != null) ...[
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.timelapse_rounded,
+                              size: 20, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Cycle day $_dayDifference',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 26),
+                  PrimaryButton(
+                    label: 'Save',
+                    icon: Icons.check_rounded,
+                    onPressed: () => _updateCycleDate(_dayDifference),
+                  ),
+                ],
               ),
-              Positioned(
-                top: kToolbarHeight + 450,
-                left: 50,
-                right: 50,
-                child: Image.asset(
-                  'assets/cyclephoto.png',
-                  fit: BoxFit.fitWidth,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );

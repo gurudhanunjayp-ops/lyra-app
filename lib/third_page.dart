@@ -17,15 +17,15 @@ class ThirdPage extends StatefulWidget {
 class _ThirdPageState extends State<ThirdPage> {
   TextEditingController userIdController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
-  TextEditingController dayDifferenceController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  String? _userIdError;
+  String? _passwordError;
 
   @override
   void dispose() {
     userIdController.dispose();
     passwordController.dispose();
-    dayDifferenceController.dispose();
     super.dispose();
   }
 
@@ -33,22 +33,21 @@ class _ThirdPageState extends State<ThirdPage> {
     setState(() {
       _isPasswordVisible = !_isPasswordVisible;
     });
-    // Automatically hide the password after 2 seconds
-    Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isPasswordVisible = false;
-      });
-    });
   }
 
   Future<void> _login() async {
     final userId = userIdController.text.trim();
     final password = passwordController.text;
-    if (userId.isEmpty || password.isEmpty) {
-      _showLoginFailedDialog('Enter both your user ID and password.');
-      return;
-    }
+
+    final idError = AppValidators.userId(userId);
+    final passError = AppValidators.loginPassword(password);
+    setState(() {
+      _userIdError = idError;
+      _passwordError = passError;
+    });
+    if (idError != null || passError != null) return;
+    if (_isLoading) return;
+
     setState(() => _isLoading = true);
     try {
       // API endpoint URL
@@ -207,6 +206,14 @@ class _ThirdPageState extends State<ThirdPage> {
                           hint: 'Enter your user id',
                           icon: Icons.person_outline_rounded,
                           controller: userIdController,
+                          maxLength: 20,
+                          textInputAction: TextInputAction.next,
+                          errorText: _userIdError,
+                          onChanged: (_) {
+                            if (_userIdError != null) {
+                              setState(() => _userIdError = null);
+                            }
+                          },
                         ),
                         const SizedBox(height: 18),
                         AppTextField(
@@ -215,7 +222,19 @@ class _ThirdPageState extends State<ThirdPage> {
                           icon: Icons.lock_outline_rounded,
                           controller: passwordController,
                           obscureText: !_isPasswordVisible,
+                          maxLength: 50,
+                          textInputAction: TextInputAction.done,
+                          errorText: _passwordError,
+                          onSubmitted: (_) => _login(),
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
                           suffixIcon: IconButton(
+                            tooltip: _isPasswordVisible
+                                ? 'Hide password'
+                                : 'Show password',
                             icon: Icon(
                               _isPasswordVisible
                                   ? Icons.visibility_off_outlined
@@ -226,8 +245,13 @@ class _ThirdPageState extends State<ThirdPage> {
                         ),
                         const SizedBox(height: 26),
                         _isLoading
-                            ? const CircularProgressIndicator(
-                                color: AppColors.primary)
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primary),
+                                ),
+                              )
                             : PrimaryButton(
                                 label: 'Login',
                                 icon: Icons.login_rounded,

@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:infertilityapp/app_ui.dart';
 import 'package:infertilityapp/comman.dart';
 import 'package:infertilityapp/fourth_page.dart';
-import 'package:infertilityapp/plogin.dart';
 
 class PProfilePage extends StatefulWidget {
   final String userId;
@@ -38,7 +37,7 @@ class _PProfilePageState extends State<PProfilePage> {
   Future<void> fetchData() async {
     final response = await http.post(
       Uri.parse(viewpatient),
-      body: {'userId': widget.userId},
+      body: {'userId': widget.userId, 'userid': widget.userId},
     );
 
     if (response.statusCode == 200) {
@@ -77,21 +76,15 @@ class _PProfilePageState extends State<PProfilePage> {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new_rounded,
             color: AppColors.ink),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    PLoginPage(userId: widget.userId, name: widget.name)),
-          );
-        },
+        onPressed: () => Navigator.pop(context),
       ),
       actions: [
         IconButton(
           onPressed: () {
-            Navigator.push(
+            Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => FourthPage()),
+              MaterialPageRoute(builder: (context) => const FourthPage()),
+              (route) => false,
             );
           },
           icon:

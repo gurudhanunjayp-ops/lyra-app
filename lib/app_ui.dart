@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Shared design system for the infertility app.
@@ -16,6 +15,79 @@ class AppColors {
   static const ink = Color(0xFF1E293B); // slate-800
   static const muted = Color(0xFF64748B); // slate-500
   static const card = Colors.white;
+  static const danger = Color(0xFFDC2626); // red-600
+  static const success = Color(0xFF16A34A); // green-600
+}
+
+/// Strict, reusable form validators shared across every login & password
+/// screen. Each validator returns `null` when the value is valid, or a
+/// human-readable error message otherwise — ready for `AppTextField.errorText`.
+class AppValidators {
+  static final RegExp _userIdPattern = RegExp(r'^[A-Za-z0-9_-]+$');
+  static final RegExp _hasLetter = RegExp(r'[A-Za-z]');
+  static final RegExp _hasDigit = RegExp(r'[0-9]');
+
+  /// Login user IDs: letters, digits, `_` or `-` only.
+  /// Length is intentionally permissive (no minimum) so legacy / short
+  /// numeric IDs from older databases can never be locked out of the app —
+  /// the server stays the source of truth for whether the account exists.
+  static String? userId(String? value, {String field = 'User ID'}) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return '$field is required';
+    if (v.length > 20) return '$field must not exceed 20 characters';
+    if (!_userIdPattern.hasMatch(v)) {
+      return '$field can only contain letters, numbers, "_" or "-"';
+    }
+    return null;
+  }
+
+  /// Login passwords are validated lightly ON PURPOSE. The existing database
+  /// stores legacy passwords that are short (e.g. "05", "1") or surrounded by
+  /// spaces (e.g. " 90", " "), so any strength rule here would lock those
+  /// users out before the request even reaches the server. Strength is only
+  /// enforced when *creating / resetting* a password — see [strongPassword].
+  static String? loginPassword(String? value) {
+    final v = value ?? '';
+    if (v.isEmpty) return 'Password is required';
+    if (v.length > 50) return 'Password must not exceed 50 characters';
+    return null;
+  }
+
+  /// Strong rules for creating / resetting a password.
+  static String? strongPassword(String? value) {
+    final v = value ?? '';
+    if (v.isEmpty) return 'Password is required';
+    if (v.trim() != v) return 'Password cannot start or end with a space';
+    if (v.length < 6) return 'Password must be at least 6 characters';
+    if (v.length > 32) return 'Password must not exceed 32 characters';
+    if (v.contains(' ')) return 'Password cannot contain spaces';
+    if (!_hasLetter.hasMatch(v) || !_hasDigit.hasMatch(v)) {
+      return 'Password must contain at least one letter and one number';
+    }
+    return null;
+  }
+
+  /// Confirm-password check that must match the original value.
+  static String? confirmPassword(String? value, String original) {
+    if (value == null || value.isEmpty) return 'Please confirm your password';
+    if (value != original) return 'Passwords do not match';
+    return null;
+  }
+
+  /// Validates the whole form map and returns `true` when every field passes.
+  /// The supplied [onError] callback receives the first error message found.
+  static bool validateAll(
+    List<String?> Function() checks, {
+    void Function(String message)? onError,
+  }) {
+    for (final error in checks()) {
+      if (error != null && error.isNotEmpty) {
+        onError?.call(error);
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 const LinearGradient kBrandGradient = LinearGradient(
@@ -465,7 +537,7 @@ class _PressableScaleState extends State<_PressableScale> {
   }
 }
 
-/// Label + rounded filled text field.
+/// Label + rounded filled text field with inline validation support.
 class AppTextField extends StatelessWidget {
   final String label;
   final TextEditingController? controller;
@@ -476,6 +548,11 @@ class AppTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool enabled;
   final int maxLines;
+  final int? maxLength;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final String? errorText;
 
   const AppTextField({
     super.key,
@@ -488,10 +565,16 @@ class AppTextField extends StatelessWidget {
     this.keyboardType,
     this.enabled = true,
     this.maxLines = 1,
+    this.maxLength,
+    this.textInputAction,
+    this.onChanged,
+    this.onSubmitted,
+    this.errorText,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasError = errorText != null && errorText!.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -510,13 +593,46 @@ class AppTextField extends StatelessWidget {
           keyboardType: keyboardType,
           enabled: enabled,
           maxLines: maxLines,
+          maxLength: maxLength,
+          textInputAction: textInputAction,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
           style: const TextStyle(color: AppColors.ink),
           decoration: InputDecoration(
+            counterText: '',
             hintText: hint,
             prefixIcon: icon != null ? Icon(icon) : null,
             suffixIcon: suffixIcon,
+            enabledBorder: hasError
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide:
+                        const BorderSide(color: AppColors.danger, width: 1.4),
+                  )
+                : null,
           ),
         ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    size: 15, color: AppColors.danger),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    errorText!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

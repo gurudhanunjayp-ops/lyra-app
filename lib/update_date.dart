@@ -4,21 +4,12 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-void main() => runApp(MyApp());
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: UpdateDate(userId: '205'), // Use a valid userId
-    );
-  }
-}
+import 'package:infertilityapp/app_ui.dart';
 
 class UpdateDate extends StatefulWidget {
   final String userId;
 
-  UpdateDate({required this.userId});
+  const UpdateDate({super.key, required this.userId});
 
   @override
   _UpdateDatePageState createState() => _UpdateDatePageState();
@@ -36,12 +27,8 @@ class _UpdateDatePageState extends State<UpdateDate> {
 
   Future<void> _fetchSavedDate() async {
     final url = 'http://192.168.40.27:80/infertility/fetchdate.php';
-    final headers = {'Content-Type': 'application/json'};
+    const headers = {'Content-Type': 'application/json'};
     final body = json.encode({'userId': widget.userId});
-
-    print('Request URL: $url'); // Debugging
-    print('Request Headers: $headers'); // Debugging
-    print('Request Body: $body'); // Debugging
 
     final response = await http.post(
       Uri.parse(url),
@@ -49,12 +36,8 @@ class _UpdateDatePageState extends State<UpdateDate> {
       body: body,
     );
 
-    print('Response Status: ${response.statusCode}'); // Debugging
-    print('Response Body: ${response.body}'); // Debugging
-
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
-      print('Response Data: $responseData'); // Debugging
 
       if (responseData['selectedDate'] != null) {
         setState(() {
@@ -62,8 +45,6 @@ class _UpdateDatePageState extends State<UpdateDate> {
           _calculateDayCount();
         });
       }
-    } else {
-      print('Failed to load date from backend');
     }
   }
 
@@ -97,45 +78,88 @@ class _UpdateDatePageState extends State<UpdateDate> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('selected_date', date.toIso8601String());
 
-    final response = await http.post(
-      Uri.parse('http://192.168.40.27:80/infertility/save_date.php'), // Ensure this is the correct URL
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'userId': widget.userId, 'selectedDate': date.toIso8601String()}),
+    await http.post(
+      Uri.parse('http://192.168.40.27:80/infertility/save_date.php'),
+      headers: const {'Content-Type': 'application/json'},
+      body: json.encode(
+          {'userId': widget.userId, 'selectedDate': date.toIso8601String()}),
     );
-
-    if (response.statusCode == 200) {
-      print('Date saved successfully');
-    } else {
-      print('Failed to save date to backend');
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Period Tracker', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xff0d9488), // Example of custom app bar color
-      ),
-      body: Center(
+    return PageScaffold(
+      decor: BgDecor.waves,
+      title: 'Period Tracker',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              _selectedDate == null
-                  ? 'No date selected'
-                  : 'Selected Date: ${DateFormat.yMMMd().format(_selectedDate!)}',
+          children: [
+            const SizedBox(height: 8),
+            const GradientIconBadge(
+              icon: Icons.calendar_month_rounded,
+              size: 84,
+              iconSize: 42,
             ),
-            Text(
-              'Day Count: $_dayCount',
-              style: Theme.of(context).textTheme.headlineMedium,
+            const SizedBox(height: 18),
+            SectionCard(
+              child: Column(
+                children: [
+                  const Text(
+                    'Current cycle day',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$_dayCount',
+                    style: const TextStyle(
+                      fontSize: 46,
+                      height: 1.05,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.event_outlined,
+                            size: 18, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          _selectedDate == null
+                              ? 'No date selected'
+                              : DateFormat.yMMMd().format(_selectedDate!),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  PrimaryButton(
+                    label: 'Select Date',
+                    icon: Icons.calendar_month_rounded,
+                    onPressed: () => _selectDate(context),
+                  ),
+                ],
+              ),
             ),
-            ElevatedButton(
-              onPressed: () => _selectDate(context),
-              child: Text('Select Date'),
-            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

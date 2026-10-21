@@ -3,10 +3,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
+import 'package:infertilityapp/app_ui.dart';
+
 class PeriodTrackerHomePage extends StatefulWidget {
   final String userId;
 
-  PeriodTrackerHomePage({required this.userId});
+  const PeriodTrackerHomePage({super.key, required this.userId});
 
   @override
   _PeriodTrackerHomePageState createState() => _PeriodTrackerHomePageState();
@@ -27,7 +29,8 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
 
   Future<void> fetchPeriodData() async {
     try {
-      final response = await http.get(Uri.parse('http://192.168.40.27:80/infertility/get_period.php?userid=${widget.userId}'));
+      final response = await http.get(Uri.parse(
+          'http://192.168.40.27:80/infertility/get_period.php?userid=${widget.userId}'));
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
@@ -44,21 +47,19 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
         });
         // Check fertile period if necessary
         checkFertilePeriod();
-      } else {
-        print('Failed to load period data');
       }
     } catch (e) {
-      print('Error fetching period data: $e');
+      // Handle network or other errors
     }
   }
 
   Future<void> savePeriodData(DateTime selectedDate, int days) async {
     try {
       // Calculate fertile period (typically day 14 to day 18)
-      fertileStartDate = selectedDate.add(Duration(days: 14));
-      fertileEndDate = selectedDate.add(Duration(days: 18));
+      fertileStartDate = selectedDate.add(const Duration(days: 14));
+      fertileEndDate = selectedDate.add(const Duration(days: 18));
 
-      final periodResponse = await http.post(
+      await http.post(
         Uri.parse('http://192.168.40.27:80/infertility/save_period.php'),
         body: {
           'userid': widget.userId,
@@ -68,24 +69,21 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
           'fertileEnd': DateFormat('yyyy-MM-dd').format(fertileEndDate!),
         },
       );
-
-      if (periodResponse.statusCode == 200) {
-        print('Period data saved successfully');
-      } else {
-        print('Failed to save period data');
-      }
     } catch (e) {
-      print('Error saving period data: $e');
+      // Handle network or other errors
     }
   }
 
   void checkFertilePeriod() {
-    if (selectedDate != null && fertileStartDate != null && fertileEndDate != null) {
+    if (selectedDate != null &&
+        fertileStartDate != null &&
+        fertileEndDate != null) {
       DateTime currentDate = DateTime.now();
-      if (currentDate.isAfter(fertileStartDate!) && currentDate.isBefore(fertileEndDate!)) {
+      if (currentDate.isAfter(fertileStartDate!) &&
+          currentDate.isBefore(fertileEndDate!)) {
         // Show fertile period notification
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showFertilePeriodNotification();
+          if (mounted) _showFertilePeriodNotification();
         });
       }
     }
@@ -96,14 +94,14 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Fertile Period'),
-          content: Text('You are in your fertile period.'),
+          title: const Text('Fertile Period'),
+          content: const Text('You are in your fertile period.'),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -113,72 +111,84 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Period Tracker', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xff0d9488), // Example of custom app bar color
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+    final hasData = selectedDate != null &&
+        dayDifference != null &&
+        fertileStartDate != null &&
+        fertileEndDate != null;
+
+    return PageScaffold(
+      decor: BgDecor.hearts,
+      title: 'Period Tracker',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            SizedBox(height: 0),
-            Center(
-              child: Image.asset(
-                'assets/girl4.png',
-                width: 260,
-                height: 260,
-              ),
+            const SizedBox(height: 8),
+            const GradientIconBadge(
+              icon: Icons.water_drop_rounded,
+              size: 84,
+              iconSize: 42,
             ),
-            SizedBox(height: 10),
-            Center(
-              child: Card(
-                elevation: 4.0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
+            const SizedBox(height: 18),
+            SectionCard(
+              child: Column(
+                children: [
+                  const Text(
+                    'Current cycle day',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${dayDifference ?? 0}',
+                    style: const TextStyle(
+                      fontSize: 46,
+                      height: 1.05,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Divider(height: 1),
+                  const SizedBox(height: 18),
+                  Row(
                     children: [
-                      if (selectedDate != null && dayDifference != null && fertileStartDate != null && fertileEndDate != null) ...[
-                        Text(
-                          'You are in Day: $dayDifference',
-                          style: TextStyle(fontSize: 18),
+                      const Icon(Icons.spa_outlined,
+                          size: 20, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Fertile period',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.ink,
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Fertile Period',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'From ${DateFormat('yyyy-MM-dd').format(fertileStartDate!)} to ${DateFormat('yyyy-MM-dd').format(fertileEndDate!)}',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ] else ...[
-                        Text(
-                          'You are in day: $dayDifference',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Fertile Period',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Fertile period not available',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ],
+                      ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      hasData
+                          ? 'From ${DateFormat('dd MMM yyyy').format(fertileStartDate!)} to ${DateFormat('dd MMM yyyy').format(fertileEndDate!)}'
+                          : 'Fertile period not available',
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 10),
-            ElevatedButton(
+            const SizedBox(height: 22),
+            PrimaryButton(
+              label: 'Edit Period Date',
+              icon: Icons.edit_calendar_rounded,
               onPressed: () async {
                 final DateTime? picked = await Navigator.push(
                   context,
@@ -190,15 +200,8 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
                   updateSelectedDate(picked);
                 }
               },
-              child: Text('Edit Period Date', style: TextStyle(color: Colors.black)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xff0d9488),
-                padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -217,6 +220,8 @@ class _PeriodTrackerHomePageState extends State<PeriodTrackerHomePage> {
 }
 
 class EditPeriodDatePage extends StatefulWidget {
+  const EditPeriodDatePage({super.key});
+
   @override
   _EditPeriodDatePageState createState() => _EditPeriodDatePageState();
 }
@@ -224,59 +229,98 @@ class EditPeriodDatePage extends StatefulWidget {
 class _EditPeriodDatePageState extends State<EditPeriodDatePage> {
   DateTime selectedDate = DateTime.now();
 
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Select Period Start Date'),
-        backgroundColor: Colors.pink,
-      ),
-      body: Center(
+    return PageScaffold(
+      decor: BgDecor.hearts,
+      title: 'Select Period Start Date',
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: () async {
-                final DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
-                );
-                if (picked != null && picked != selectedDate) {
-                  setState(() {
-                    selectedDate = picked;
-                  });
-                }
-              },
-              child: Text('Select Date'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink,
-                padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
+            const SizedBox(height: 8),
+            const GradientIconBadge(
+              icon: Icons.event_available_rounded,
+              size: 84,
+              iconSize: 42,
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Choose the first day of your period',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14.5, color: AppColors.muted),
+            ),
+            const SizedBox(height: 26),
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Period start date',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _pickDate,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFC9E8E2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              size: 20, color: AppColors.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              DateFormat('dd MMM yyyy').format(selectedDate),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.ink,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.expand_more_rounded,
+                              color: AppColors.muted),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  PrimaryButton(
+                    label: 'Save',
+                    icon: Icons.check_rounded,
+                    onPressed: () => Navigator.pop(context, selectedDate),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 16),
-            Text(
-              'Selected Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
-              style: TextStyle(fontSize: 18),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, selectedDate);
-              },
-              child: Text('Save'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink,
-                padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

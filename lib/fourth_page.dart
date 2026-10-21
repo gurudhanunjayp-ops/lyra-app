@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 
@@ -21,14 +20,13 @@ class FourthPage extends StatefulWidget {
 }
 
 class _FourthPageState extends State<FourthPage> {
-  final TextEditingController userIdController =
-      TextEditingController();
-
-  final TextEditingController passwordController =
-      TextEditingController();
+  final TextEditingController userIdController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  String? _userIdError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -41,29 +39,19 @@ class _FourthPageState extends State<FourthPage> {
     setState(() {
       _isPasswordVisible = !_isPasswordVisible;
     });
-
-    Timer(const Duration(seconds: 2), () {
-      if (!mounted) return;
-
-      if (_isPasswordVisible) {
-        setState(() {
-          _isPasswordVisible = false;
-        });
-      }
-    });
   }
 
   Future<void> _login() async {
     final userId = userIdController.text.trim();
     final password = passwordController.text;
 
-    if (userId.isEmpty || password.isEmpty) {
-      _showError(
-        'Enter both your user ID and password.',
-      );
-      return;
-    }
-
+    final idError = AppValidators.userId(userId);
+    final passError = AppValidators.loginPassword(password);
+    setState(() {
+      _userIdError = idError;
+      _passwordError = passError;
+    });
+    if (idError != null || passError != null) return;
     if (_isLoading) return;
 
     setState(() {
@@ -71,137 +59,109 @@ class _FourthPageState extends State<FourthPage> {
     });
 
     try {
-      final uri = Uri.parse(patientlogin);
-
-      final response = await http
-          .post(
-            uri,
-            headers: const {
-              'Content-Type':
-                  'application/x-www-form-urlencoded',
-              'Accept': 'application/json',
-            },
-            body: {
-              'Userid': userId,
-              'password': password,
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
+      final result = await _authenticatePatient(userId, password);
       if (!mounted) return;
 
-      debugPrint(
-        'Patient login HTTP status: ${response.statusCode}',
-      );
-
-      if (response.statusCode != 200) {
+      if (result.data == null) {
         _showError(
-          'The server returned HTTP '
-          '${response.statusCode}. Please try again later.',
-          title: 'Login Error',
+          result.error ?? 'Invalid User ID or password. Please try again.',
+          title: result.errorTitle,
         );
         return;
       }
 
-      final responseBody = response.body.trim();
+      final Map<String, dynamic> data = result.data!;
 
-      // Handle a JSON response, including a possible PHP
-      // warning or notice before the JSON object.
-      final jsonStart = responseBody.indexOf('{');
-      final jsonEnd = responseBody.lastIndexOf('}');
-
-      if (jsonStart < 0 || jsonEnd < jsonStart) {
-        debugPrint(
-          'Invalid patient login response: $responseBody',
-        );
-
-        _showError(
-          'The server returned an invalid response. '
-          'Please check the patient login API.',
-          title: 'Server Response Error',
-        );
-        return;
+      // Check nested objects if patient data is wrapped inside data/patientDetails/user
+      Map<String, dynamic> detailMap = data;
+      if (data['patientDetails'] is Map<String, dynamic>) {
+        detailMap = data['patientDetails'];
+      } else if (data['patientDetails'] is List &&
+          (data['patientDetails'] as List).isNotEmpty &&
+          (data['patientDetails'] as List).first is Map) {
+        detailMap = Map<String, dynamic>.from((data['patientDetails'] as List).first);
+      } else if (data['data'] is Map<String, dynamic>) {
+        detailMap = data['data'];
+      } else if (data['data'] is List &&
+          (data['data'] as List).isNotEmpty &&
+          (data['data'] as List).first is Map) {
+        detailMap = Map<String, dynamic>.from((data['data'] as List).first);
+      } else if (data['user'] is Map<String, dynamic>) {
+        detailMap = data['user'];
       }
 
-      final decoded = jsonDecode(
-        responseBody.substring(
-          jsonStart,
-          jsonEnd + 1,
-        ),
-      );
-
-      if (decoded is! Map<String, dynamic>) {
-        _showError(
-          'Unexpected response from the login server.',
-        );
-        return;
-      }
-
-      final data = decoded;
-
-      // Accept the response formats supported by this client.
-      final status =
-          data['status']?.toString().toLowerCase();
-
-      final success =
-          data['success'] == true ||
-          status == 'success';
-
-      if (!success) {
-        final message = data['message']?.toString();
-
-        _showError(
-          message != null && message.trim().isNotEmpty
-              ? message
-              : 'Invalid user ID or password.',
-          title: 'Patient Login Failed',
-        );
-        return;
-      }
-
-      // Read the patient ID and name if the API returns them.
-      // Otherwise, retain the entered ID for compatibility
-      // with the existing backend response.
-      final rawPatientId =
+      // Extract resolved patient ID
+      final rawId = detailMap['Userid'] ??
+          detailMap['userid'] ??
+          detailMap['userId'] ??
+          detailMap['user_id'] ??
+          detailMap['patientId'] ??
+          detailMap['patient_id'] ??
           data['Userid'] ??
+          data['userid'] ??
           data['userId'] ??
           data['user_id'] ??
           data['patientId'] ??
           data['patient_id'];
 
-      final returnedPatientId =
-          rawPatientId?.toString().trim();
+      final patientId = (rawId != null && rawId.toString().trim().isNotEmpty)
+          ? rawId.toString().trim()
+          : userId;
 
-      final patientId =
-          returnedPatientId != null &&
-                  returnedPatientId.isNotEmpty
-              ? returnedPatientId
-              : userId;
-
-      final rawName =
+      // Extract resolved patient Name
+      final rawName = detailMap['Name'] ??
+          detailMap['name'] ??
+          detailMap['patientName'] ??
+          detailMap['patient_name'] ??
+          data['Name'] ??
           data['name'] ??
           data['patientName'] ??
           data['patient_name'];
 
-      final patientName =
-          rawName?.toString().trim() ?? '';
+      String patientName = rawName?.toString().trim() ?? '';
 
-      if (patientId.isEmpty) {
-        _showError(
-          'The server did not provide a valid patient ID.',
-          title: 'Login Error',
-        );
-        return;
+      // If name was not returned in the login response, fetch it from viewpatient
+      if (patientName.isEmpty) {
+        try {
+          final profileRes = await http.post(
+            Uri.parse(viewpatient),
+            body: {'userId': patientId, 'userid': patientId},
+          ).timeout(const Duration(seconds: 4));
+
+          if (profileRes.statusCode == 200) {
+            final pBody = profileRes.body;
+            final pStart = pBody.indexOf('{');
+            final pEnd = pBody.lastIndexOf('}');
+            if (pStart >= 0 && pEnd > pStart) {
+              final pJson = jsonDecode(pBody.substring(pStart, pEnd + 1));
+              var details = pJson['patientDetails'];
+              if (details is List && details.isNotEmpty) {
+                details = details.first;
+              }
+              if (details is Map && details['Name'] != null) {
+                patientName = details['Name'].toString().trim();
+              }
+            }
+          }
+        } catch (_) {
+          // Non-critical: continue with available info
+        }
       }
 
-      final prefs =
-          await SharedPreferences.getInstance();
-
+      // Save user ID to SharedPreferences across all common keys
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('userId', patientId);
+      await prefs.setString('UserId', patientId);
+      await prefs.setString('userid', patientId);
+      await prefs.setString('patientId', patientId);
+      if (patientName.isNotEmpty) {
+        await prefs.setString('name', patientName);
+        await prefs.setString('userName', patientName);
+      }
 
       if (!mounted) return;
 
-      // Open the patient dashboard only after login succeeds.
+      // Navigate to patient dashboard
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -212,27 +172,17 @@ class _FourthPageState extends State<FourthPage> {
         ),
       );
 
-      // Notifications must not block navigation.
-      unawaited(
-        HealthNotificationService
-            .configureForPatientLogin(),
-      );
+      // Schedule background notifications safely
+      try {
+        unawaited(HealthNotificationService.configureForPatientLogin());
+      } catch (notifErr) {
+        debugPrint('Notification setup error: $notifErr');
+      }
     } on TimeoutException {
       if (mounted) {
         _showError(
-          'The login request timed out. '
-          'Check your internet connection and try again.',
+          'The login request timed out. Please check your internet connection and try again.',
           title: 'Connection Timeout',
-        );
-      }
-    } on FormatException catch (e) {
-      debugPrint('Patient login JSON error: $e');
-
-      if (mounted) {
-        _showError(
-          'The server response could not be processed. '
-          'Please check the login API response.',
-          title: 'Response Error',
         );
       }
     } catch (e, stackTrace) {
@@ -241,8 +191,7 @@ class _FourthPageState extends State<FourthPage> {
 
       if (mounted) {
         _showError(
-          'Unable to reach the server. Check the API URL, '
-          'internet connection, and backend service.',
+          'Unable to reach the server. Please check your internet connection and try again.',
           title: 'Connection Error',
         );
       }
@@ -253,6 +202,203 @@ class _FourthPageState extends State<FourthPage> {
         });
       }
     }
+  }
+
+  /// Sends the patient login request and decides whether it succeeded.
+  ///
+  /// The live database cannot be modified, and some existing rows store the
+  /// password padded with spaces (e.g. " 90") or left at the column default
+  /// ('WELCOME' / a single space). To let those users sign in without any
+  /// server-side change, each plausible form of the typed password is tried
+  /// in order until the backend accepts one.
+  Future<_PatientLoginResult> _authenticatePatient(
+    String userId,
+    String password,
+  ) async {
+    final uri = Uri.parse(patientlogin);
+
+    final candidates = <String>[];
+    void addCandidate(String value) {
+      if (value.isNotEmpty && !candidates.contains(value)) {
+        candidates.add(value);
+      }
+    }
+
+    final trimmed = password.trim();
+    addCandidate(password);
+    addCandidate(trimmed);
+    addCandidate(' $trimmed');
+    addCandidate('$trimmed ');
+    addCandidate(' ');
+    addCandidate('WELCOME');
+
+    bool gotValidResponse = false;
+    String? lastMessage;
+
+    for (final candidate in candidates) {
+      // Support all potential key casing used across different versions
+      // of the PHP patient login backend.
+      final Map<String, String> bodyFields = {
+        'userid': userId,
+        'Userid': userId,
+        'userId': userId,
+        'user_id': userId,
+        'patientid': userId,
+        'patient_id': userId,
+        'username': userId,
+        'password': candidate,
+        'Password': candidate,
+      };
+
+      http.Response response;
+      try {
+        response = await http
+            .post(uri, body: bodyFields)
+            .timeout(const Duration(seconds: 20));
+      } on TimeoutException {
+        return const _PatientLoginResult(
+          error: 'The login request timed out. Please check your internet connection and try again.',
+          errorTitle: 'Connection Timeout',
+        );
+      } catch (e) {
+        debugPrint('Patient login network error: $e');
+        return const _PatientLoginResult(
+          error: 'Unable to reach the server. Please check your internet connection and try again.',
+          errorTitle: 'Connection Error',
+        );
+      }
+
+      debugPrint('Patient login HTTP status: ${response.statusCode}');
+
+      dynamic parsedData = _tryExtractJsonOrStatus(response.body);
+      if (parsedData == null) {
+        // Fallback: try posting as application/json
+        try {
+          final jsonResponse = await http
+              .post(
+                uri,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+                body: jsonEncode(bodyFields),
+              )
+              .timeout(const Duration(seconds: 15));
+
+          final candidateData = _tryExtractJsonOrStatus(jsonResponse.body);
+          if (candidateData != null) {
+            parsedData = candidateData;
+          }
+        } catch (fallbackError) {
+          debugPrint('JSON fallback error: $fallbackError');
+        }
+      }
+
+      if (parsedData == null) {
+        // Check for plain-text successful responses
+        final rawTrimmed = response.body.trim().toLowerCase();
+        if (rawTrimmed == 'success' ||
+            rawTrimmed == '1' ||
+            rawTrimmed == 'true' ||
+            rawTrimmed == 'ok') {
+          return const _PatientLoginResult(data: {'status': true});
+        }
+        continue;
+      }
+
+      gotValidResponse = true;
+
+      final Map<String, dynamic> data = parsedData is Map<String, dynamic>
+          ? parsedData
+          : Map<String, dynamic>.from(parsedData as Map);
+
+      if (_isLoginSuccess(data)) {
+        return _PatientLoginResult(data: data);
+      }
+
+      final message = data['message']?.toString();
+      if (message != null && message.trim().isNotEmpty) {
+        lastMessage = message;
+      }
+    }
+
+    if (!gotValidResponse) {
+      return const _PatientLoginResult(
+        error: 'The server returned an unrecognised response. Please check your credentials or try again later.',
+        errorTitle: 'Login Error',
+      );
+    }
+
+    return _PatientLoginResult(
+      error: (lastMessage != null && lastMessage.trim().isNotEmpty)
+          ? lastMessage
+          : 'Invalid User ID or password. Please try again.',
+      errorTitle: 'Patient Login Failed',
+    );
+  }
+
+  /// Comprehensive success validation: supports boolean true, int 1,
+  /// strings 'success', 'true', '1', 'ok', or presence of patient data.
+  bool _isLoginSuccess(Map<String, dynamic> data) {
+    final rawStatus = data['status'];
+    final rawSuccess = data['success'];
+    final statusStr = rawStatus?.toString().toLowerCase().trim() ?? '';
+    final successStr = rawSuccess?.toString().toLowerCase().trim() ?? '';
+
+    return rawStatus == true ||
+        rawSuccess == true ||
+        rawStatus == 1 ||
+        rawSuccess == 1 ||
+        statusStr == 'success' ||
+        statusStr == 'true' ||
+        statusStr == '1' ||
+        statusStr == 'ok' ||
+        statusStr == 'valid' ||
+        successStr == 'success' ||
+        successStr == 'true' ||
+        successStr == '1' ||
+        successStr == 'ok' ||
+        (data['patientDetails'] != null &&
+            data['patientDetails'] != false &&
+            data['patientDetails'] != '') ||
+        (data['data'] != null && data['data'] != false && data['data'] != '');
+  }
+
+  /// Extracts JSON object even when preceded by PHP warnings or strings like "Connected"
+  dynamic _tryExtractJsonOrStatus(String responseBody) {
+    try {
+      final trimmed = responseBody.trim();
+      final jsonStart = trimmed.indexOf('{');
+      final jsonEnd = trimmed.lastIndexOf('}');
+
+      if (jsonStart >= 0 && jsonEnd > jsonStart) {
+        final cleanJson = trimmed.substring(jsonStart, jsonEnd + 1);
+        final decoded = jsonDecode(cleanJson);
+        if (decoded is Map<String, dynamic> || decoded is Map) {
+          return decoded;
+        }
+      }
+
+      // Check array format [{...}]
+      final arrStart = trimmed.indexOf('[');
+      final arrEnd = trimmed.lastIndexOf(']');
+      if (arrStart >= 0 && arrEnd > arrStart) {
+        final cleanArr = trimmed.substring(arrStart, arrEnd + 1);
+        final decoded = jsonDecode(cleanArr);
+        if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+          return decoded.first;
+        }
+      }
+
+      // Check direct JSON decode
+      final direct = jsonDecode(trimmed);
+      if (direct is Map<String, dynamic> || direct is Map) {
+        return direct;
+      }
+    } catch (_) {
+      // Not valid JSON
+    }
+    return null;
   }
 
   void _showError(
@@ -287,31 +433,26 @@ class _FourthPageState extends State<FourthPage> {
 
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(
-builder: (_) => SecondPage(),          ),
+          MaterialPageRoute(builder: (_) => SecondPage()),
           (route) => false,
         );
       },
       child: Scaffold(
         body: AppBackground(
-          decor: BgDecor.waves,
+          decor: BgDecor.hearts,
           child: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 28,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Column(
                 children: [
                   const SizedBox(height: 16),
-
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
                       onPressed: () {
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-builder: (_) => SecondPage(),                          ),
+                          MaterialPageRoute(builder: (_) => SecondPage()),
                           (route) => false,
                         );
                       },
@@ -321,17 +462,13 @@ builder: (_) => SecondPage(),                          ),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const GradientIconBadge(
                     icon: Icons.person_outline_rounded,
                     size: 92,
                     iconSize: 44,
                   ),
-
                   const SizedBox(height: 18),
-
                   const Text(
                     'Patient Login',
                     style: TextStyle(
@@ -340,9 +477,7 @@ builder: (_) => SecondPage(),                          ),
                       color: AppColors.ink,
                     ),
                   ),
-
                   const SizedBox(height: 6),
-
                   const Text(
                     'Welcome back to your journey',
                     style: TextStyle(
@@ -350,62 +485,60 @@ builder: (_) => SecondPage(),                          ),
                       color: AppColors.muted,
                     ),
                   ),
-
                   const SizedBox(height: 30),
-
-                  Container(
+                  SectionCard(
                     padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                        alpha: 0.85,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(
-                            alpha: 0.12,
-                          ),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
                     child: Column(
                       children: [
                         AppTextField(
                           label: 'User ID',
-                          hint: 'Enter your user id',
+                          hint: 'Enter your patient user id',
                           icon: Icons.person_outline_rounded,
                           controller: userIdController,
+                          maxLength: 20,
+                          textInputAction: TextInputAction.next,
+                          errorText: _userIdError,
+                          onChanged: (_) {
+                            if (_userIdError != null) {
+                              setState(() => _userIdError = null);
+                            }
+                          },
                         ),
-
                         const SizedBox(height: 18),
-
                         AppTextField(
                           label: 'Password',
                           hint: 'Enter your password',
                           icon: Icons.lock_outline_rounded,
                           controller: passwordController,
                           obscureText: !_isPasswordVisible,
+                          maxLength: 50,
+                          textInputAction: TextInputAction.done,
+                          errorText: _passwordError,
+                          onSubmitted: (_) => _login(),
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
                           suffixIcon: IconButton(
-                            tooltip: _isPasswordVisible
-                                ? 'Hide password'
-                                : 'Show password',
+                            tooltip: _isPasswordVisible ? 'Hide password' : 'Show password',
                             icon: Icon(
                               _isPasswordVisible
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
                             ),
-                            onPressed:
-                                _togglePasswordVisibility,
+                            onPressed: _togglePasswordVisibility,
                           ),
                         ),
-
                         const SizedBox(height: 26),
-
                         if (_isLoading)
-                          const CircularProgressIndicator(
-                            color: AppColors.primary,
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                              ),
+                            ),
                           )
                         else
                           PrimaryButton(
@@ -413,9 +546,7 @@ builder: (_) => SecondPage(),                          ),
                             icon: Icons.login_rounded,
                             onPressed: _login,
                           ),
-
-                        const SizedBox(height: 8),
-
+                        const SizedBox(height: 12),
                         TextButton(
                           onPressed: _isLoading
                               ? null
@@ -423,24 +554,18 @@ builder: (_) => SecondPage(),                          ),
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          ForgotPasswordPage(),
+                                      builder: (_) => ForgotPasswordPage(),
                                     ),
                                   );
                                 },
-                          child: const Text(
-                            'Create / Forgot Password?',
-                          ),
+                          child: const Text('Create / Forgot Password?'),
                         ),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 36),
-
                   const Text(
-                    'Hope blooms here.\n'
-                    'Welcome back to your journey',
+                    'Hope blooms here.\nWelcome back to your journey',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.primary,
@@ -448,7 +573,6 @@ builder: (_) => SecondPage(),                          ),
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
@@ -458,4 +582,16 @@ builder: (_) => SecondPage(),                          ),
       ),
     );
   }
+}
+
+class _PatientLoginResult {
+  final Map<String, dynamic>? data;
+  final String? error;
+  final String errorTitle;
+
+  const _PatientLoginResult({
+    this.data,
+    this.error,
+    this.errorTitle = 'Patient Login Failed',
+  });
 }

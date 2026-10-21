@@ -27,6 +27,7 @@ class _PAdvicePageState extends State<PAdvicePage> {
     final url = Uri.parse(viewadvice);
     final response = await http.post(url, body: {
       'userid': widget.userId,
+      'userId': widget.userId,
     });
 
     if (response.statusCode == 200) {

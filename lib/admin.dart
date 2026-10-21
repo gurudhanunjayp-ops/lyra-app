@@ -17,6 +17,7 @@ class _AdminState extends State<Admin> {
   final String adminId = '1920';
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -28,21 +29,15 @@ class _AdminState extends State<Admin> {
     setState(() {
       _isPasswordVisible = !_isPasswordVisible;
     });
-
-    // Automatically hide the password after 2 seconds
-    Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isPasswordVisible = false;
-      });
-    });
   }
 
   Future<void> loginAdmin() async {
-    if (passwordController.text.isEmpty) {
-      _showLoginFailedDialog('Enter the admin password.');
-      return;
-    }
+    final password = passwordController.text;
+    final passError = AppValidators.loginPassword(password);
+    setState(() => _passwordError = passError);
+    if (passError != null) return;
+    if (_isLoading) return;
+
     setState(() => _isLoading = true);
     try {
       final response = await http
@@ -168,7 +163,19 @@ class _AdminState extends State<Admin> {
                           icon: Icons.lock_outline_rounded,
                           controller: passwordController,
                           obscureText: !_isPasswordVisible,
+                          maxLength: 50,
+                          textInputAction: TextInputAction.done,
+                          errorText: _passwordError,
+                          onSubmitted: (_) => loginAdmin(),
+                          onChanged: (_) {
+                            if (_passwordError != null) {
+                              setState(() => _passwordError = null);
+                            }
+                          },
                           suffixIcon: IconButton(
+                            tooltip: _isPasswordVisible
+                                ? 'Hide password'
+                                : 'Show password',
                             icon: Icon(
                               _isPasswordVisible
                                   ? Icons.visibility_off_outlined
@@ -179,8 +186,13 @@ class _AdminState extends State<Admin> {
                         ),
                         const SizedBox(height: 26),
                         _isLoading
-                            ? const CircularProgressIndicator(
-                                color: AppColors.primary)
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primary),
+                                ),
+                              )
                             : PrimaryButton(
                                 label: 'Login',
                                 icon: Icons.login_rounded,

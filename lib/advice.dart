@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:infertilityapp/app_ui.dart';
+import 'package:infertilityapp/comman.dart';
 import 'package:infertilityapp/viewadvice2.dart';
 import 'package:intl/intl.dart';
 
@@ -24,7 +25,7 @@ class AdvicePage extends StatelessWidget {
 
     // Send data to the PHP backend script
     final response = await http.post(
-      Uri.parse('http://192.168.40.27:80/infertility/addadvices.php'),
+      Uri.parse(addadvice),
       body: {
         'userid': userId,
         'date': formattedDate,
